@@ -49,6 +49,7 @@ import { migrate } from "./migrate"
 import { cleanupStoreFiles } from "./store-cleanup"
 import { startBackgroundCli } from "./background-cli"
 import { setNativeTranslations } from "./native-translations"
+import { getPetWindow, startPet } from "./pet"
 
 const APP_NAMES: Record<string, string> = {
   dev: "OpenCode Dev",
@@ -412,6 +413,19 @@ const main = Effect.gen(function* () {
     if (process.platform === "darwin") return
     app.quit()
   })
+  // The pet is a window too, so it would keep `window-all-closed` from ever
+  // firing and leave the app running with no chat window. Quit as soon as the
+  // last non-pet window goes away instead.
+  app.on("browser-window-created", (_event, win) => {
+    win.on("closed", () => {
+      if (win === getPetWindow()) return
+      if (process.platform === "darwin") return
+      const remaining = BrowserWindow.getAllWindows().filter(
+        (candidate) => candidate !== getPetWindow() && !candidate.isDestroyed(),
+      )
+      if (remaining.length === 0) app.quit()
+    })
+  })
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length > 0) return
     restoreMainWindows()
@@ -419,6 +433,7 @@ const main = Effect.gen(function* () {
 
   const windows = restoreMainWindows()
   if (windows.length) createMenu(menuDeps)
+  startPet()
 })
 
 Effect.runFork(main)

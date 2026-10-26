@@ -645,6 +645,15 @@ export const dict = {
   "notification.session.error.title": "Session error",
   "notification.session.error.fallbackDescription": "An error occurred",
 
+  "notification.speech.done": "{{task}} is done",
+  "notification.speech.doneUnknown": "That turn is done",
+  "notification.speech.error": "{{task}} hit a problem: {{reason}}",
+  "notification.speech.errorUnknown": "Something went wrong: {{reason}}",
+  "notification.speech.permission": "I need your go-ahead: {{detail}}",
+  "notification.speech.permissionBare": "I need your go-ahead on something",
+  "notification.speech.question": "One thing to confirm: {{detail}}",
+  "notification.speech.questionBare": "I have one thing to confirm",
+
   "home.recentProjects": "Recent projects",
   "home.empty.title": "No recent projects",
   "home.empty.description": "Get started by opening a local project",

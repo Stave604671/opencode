@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron"
-import type { ElectronAPI, WslServersEvent } from "./types"
+import type { ElectronAPI, PetSnapshot, PetSpeech, WslServersEvent } from "./types"
+
 import type { UpdaterState } from "@opencode-ai/app/updater"
 
 const updaterCallbacks = new Set<(state: UpdaterState) => void>()
@@ -15,8 +16,7 @@ const api: ElectronAPI = {
   installCli: () => ipcRenderer.invoke("install-cli"),
   awaitInitialization: () => ipcRenderer.invoke("await-initialization"),
   wslServers: {
-    getState: () => ipcRenderer.invoke("wsl-servers-get-state"),
-    subscribe: (cb) => {
+    getState: () => ipcRenderer.invoke("wsl-servers-get-state"),    subscribe: (cb) => {
       const handler = (_: unknown, event: WslServersEvent) => cb(event)
       ipcRenderer.on("wsl-servers-event", handler)
       void ipcRenderer.invoke("wsl-servers-subscribe")
@@ -55,6 +55,35 @@ const api: ElectronAPI = {
     },
     check: () => ipcRenderer.invoke("updater-check"),
     install: () => ipcRenderer.invoke("updater-install"),
+  },
+  pet: {
+    getState: () => ipcRenderer.invoke("pet-get-state"),
+    onState: (cb) => {
+      const handler = (_: unknown, state: PetSnapshot) => cb(state)
+      ipcRenderer.on("pet-state", handler)
+      return () => ipcRenderer.removeListener("pet-state", handler)
+    },
+    report: (activity) => ipcRenderer.invoke("pet-report", activity),
+    say: (speech) => ipcRenderer.invoke("pet-say", speech),
+    sayClick: (id) => ipcRenderer.invoke("pet-say-click", id),
+    onSay: (cb) => {
+      const handler = (_: unknown, speech: PetSpeech) => cb(speech)
+      ipcRenderer.on("pet-say", handler)
+      return () => ipcRenderer.removeListener("pet-say", handler)
+    },
+    onSayClick: (cb) => {
+      const handler = (_: unknown, id: string) => cb(id)
+      ipcRenderer.on("pet-say-click", handler)
+      return () => ipcRenderer.removeListener("pet-say-click", handler)
+    },
+    focusMain: () => ipcRenderer.invoke("pet-focus-main"),
+    dragStart: () => ipcRenderer.invoke("pet-drag-start"),
+    dragTo: (dx, dy) => ipcRenderer.invoke("pet-drag-move", dx, dy),
+    dragEnd: () => ipcRenderer.invoke("pet-drag-end"),
+    getVisible: () => ipcRenderer.invoke("pet-get-visible"),
+    setVisible: (visible) => ipcRenderer.invoke("pet-set-visible", visible),
+    toggle: () => ipcRenderer.invoke("pet-toggle"),
+    bindSession: (sessionID) => ipcRenderer.invoke("pet-bind-session", sessionID),
   },
   consumeInitialDeepLinks: () => ipcRenderer.invoke("consume-initial-deep-links"),
   getDefaultServerUrl: () => ipcRenderer.invoke("get-default-server-url"),

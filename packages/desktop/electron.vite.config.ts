@@ -99,6 +99,10 @@ const require = __cjs_mod__.createRequire(import.meta.url);
       rollupOptions: {
         input: {
           main: "src/renderer/index.html",
+          // The desktop pet is a second, tiny renderer entry loaded by its own
+          // transparent window. It must stay bundled on its own so the pet never
+          // pays for the chat app's bootstrap.
+          pet: "src/renderer/pet/index.html",
         },
       },
     },

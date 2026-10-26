@@ -6,7 +6,7 @@ import type { IpcMainEvent, IpcMainInvokeEvent } from "electron"
 import type { DesktopMenuAction } from "@opencode-ai/app/desktop-menu"
 import { parseDesktopNativeBundle, type DesktopNativeBundle } from "@opencode-ai/app/i18n/desktop-native"
 
-import type { FatalRendererError, ServerReadyData, TitlebarTheme } from "../preload/types"
+import type { FatalRendererError, PetActivity, PetSpeech, ServerReadyData, TitlebarTheme } from "../preload/types"
 import { runDesktopMenuAction } from "./desktop-menu-actions"
 import { setForceFocus } from "./debug"
 import { assertAttachmentBudget, createPickedFileAuthorizations } from "./attachment-picker"
@@ -24,6 +24,20 @@ import type { UpdaterController } from "./updater-controller"
 import { createUpdaterSubscriptions } from "./updater-subscriptions"
 import { createDesktopDraftStore } from "./draft-store"
 import { nativeT } from "./native-translations"
+import {
+  beginPetDrag,
+  clickPetSpeech,
+  dragPet,
+  endPetDrag,
+  focusMainWindow,
+  getPetSnapshot,
+  isPetVisible,
+  reportPetActivity,
+  sayInPet,
+  setBoundSession,
+  setPetVisible,
+  togglePet,
+} from "./pet"
 
 const pickerFilters = (ext?: string[]) => {
   if (!ext || ext.length === 0) return undefined
@@ -95,6 +109,25 @@ export function registerIpcHandlers(deps: Deps) {
   ipcMain.handle("updater-check", () => deps.updater.check())
   ipcMain.handle("updater-install", () => deps.updater.install())
   ipcMain.handle("set-background-color", (_event: IpcMainInvokeEvent, color: string) => deps.setBackgroundColor(color))
+  ipcMain.handle("pet-get-state", () => getPetSnapshot())
+  ipcMain.handle("pet-report", (_event: IpcMainInvokeEvent, activity: PetActivity) => {
+    reportPetActivity(activity)
+  })
+  ipcMain.handle("pet-get-visible", () => isPetVisible())
+  ipcMain.handle("pet-focus-main", () => focusMainWindow())
+  ipcMain.handle("pet-drag-start", () => beginPetDrag())
+  ipcMain.handle("pet-drag-move", (_event: IpcMainInvokeEvent, dx: number, dy: number) => dragPet(dx, dy))
+  ipcMain.handle("pet-drag-end", () => endPetDrag())
+  ipcMain.handle("pet-set-visible", (_event: IpcMainInvokeEvent, visible: boolean) => {
+    setPetVisible(visible === true)
+    return isPetVisible()
+  })
+  ipcMain.handle("pet-toggle", () => togglePet())
+  ipcMain.handle("pet-say", (_event: IpcMainInvokeEvent, speech: PetSpeech) => sayInPet(speech))
+  ipcMain.handle("pet-say-click", (_event: IpcMainInvokeEvent, id: string) => clickPetSpeech(String(id ?? "")))
+  ipcMain.handle("pet-bind-session", (_event: IpcMainInvokeEvent, sessionID: string | null) => {
+    setBoundSession(typeof sessionID === "string" ? sessionID : null)
+  })
   ipcMain.handle("export-debug-logs", () => deps.exportDebugLogs())
   ipcMain.handle("set-force-focus", (event: IpcMainInvokeEvent, enabled: boolean) =>
     setForceFocus(event.sender, enabled),

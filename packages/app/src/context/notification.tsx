@@ -14,6 +14,7 @@ import { Persist, persisted } from "@/utils/persist"
 import { playSoundById } from "@/utils/sound"
 import { useGlobal } from "./global"
 import { ServerConnection, useServer } from "./server"
+import { errorReason, lastReplyText, petSpeech } from "./pet-speech"
 import { type DraftTab, useTabs } from "./tabs"
 import { requireServerKey } from "@/utils/session-route"
 import type { ServerScope } from "@/utils/server-scope"
@@ -337,6 +338,7 @@ function createServerNotificationState(input: {
 
   const handleSessionIdle = (directory: string, event: { properties: { sessionID?: string } }, time: number) => {
     const sessionID = event.properties.sessionID
+    const sync = serverSync().ensureDirSyncContext(directory)
     void lookup(directory, sessionID).then((session) => {
       if (meta.disposed) return
       if (!session) return
@@ -356,9 +358,16 @@ function createServerNotificationState(input: {
 
       const href = `/${base64Encode(directory)}/session/${sessionID}`
       if (settings.notifications.agent()) {
-        void platform.notify(language.t("notification.session.responseReady.title"), session.title ?? sessionID, () =>
-          input.navigate(href),
-        )
+        // The pet reports back in its own words instead of labelling the event:
+        // the model's closing line already says what got done, in the language
+        // and terms of this very conversation.
+        const line = petSpeech({
+          kind: "done",
+          reply: lastReplyText(sync.session, sessionID),
+          task: session.title,
+          t: language.t,
+        })
+        void platform.notify(line, undefined, () => input.navigate(href), "done")
       }
     })
   }
@@ -386,12 +395,11 @@ function createServerNotificationState(input: {
         session: sessionID ?? "global",
         error,
       })
-      const description =
-        session?.title ??
-        (typeof error === "string" ? error : language.t("notification.session.error.fallbackDescription"))
+      const reason = errorReason(error, language.t("notification.session.error.fallbackDescription"))
       const href = sessionID ? `/${base64Encode(directory)}/session/${sessionID}` : `/${base64Encode(directory)}`
       if (settings.notifications.errors()) {
-        void platform.notify(language.t("notification.session.error.title"), description, () => input.navigate(href))
+        const line = petSpeech({ kind: "error", task: session?.title ?? null, detail: reason, t: language.t })
+        void platform.notify(line, undefined, () => input.navigate(href), "error")
       }
     })
   }

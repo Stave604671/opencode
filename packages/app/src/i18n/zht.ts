@@ -715,6 +715,15 @@ export const dict = {
   "notification.session.error.title": "工作階段錯誤",
   "notification.session.error.fallbackDescription": "發生錯誤",
 
+  "notification.speech.done": "{{task}}弄完了",
+  "notification.speech.doneUnknown": "這一輪弄完了",
+  "notification.speech.error": "{{task}}出問題了：{{reason}}",
+  "notification.speech.errorUnknown": "出問題了：{{reason}}",
+  "notification.speech.permission": "有個權限等你點頭：{{detail}}",
+  "notification.speech.permissionBare": "有個權限等你點頭",
+  "notification.speech.question": "想跟你確認一下：{{detail}}",
+  "notification.speech.questionBare": "有個事想跟你確認",
+
   "home.recentProjects": "最近專案",
   "home.empty.title": "沒有最近專案",
   "home.empty.description": "開啟本機專案以開始使用",

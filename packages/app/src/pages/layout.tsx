@@ -38,6 +38,7 @@ import { useServerSDK } from "@/context/server-sdk"
 import { normalizeProjectInfo } from "@/context/global-sync/utils"
 import { clearWorkspaceTerminals } from "@/context/terminal"
 import { pickSessionCacheEvictions } from "@/context/global-sync/session-cache"
+import { permissionAction, petSpeech, questionPrompt } from "@/context/pet-speech"
 import { useNotification } from "@/context/notification"
 import { usePermission } from "@/context/permission"
 import { Binary } from "@opencode-ai/core/util/binary"
@@ -435,6 +436,12 @@ export default function LegacyLayout(props: ParentProps) {
             ? language.t("notification.permission.description", { sessionTitle, projectName })
             : language.t("notification.question.description", { sessionTitle, projectName })
         const href = `/${base64Encode(directory)}/session/${props.sessionID}`
+        // The toast below stays notification-shaped; the pet says it like a
+        // person would, because that is the surface people actually look at.
+        const speech =
+          e.details.type === "permission.asked"
+            ? petSpeech({ kind: "permission", detail: permissionAction(props), t: language.t })
+            : petSpeech({ kind: "question", detail: questionPrompt(props), t: language.t })
 
         const now = Date.now()
         const lastAlerted = alertedAtBySession.get(sessionKey) ?? 0
@@ -446,13 +453,13 @@ export default function LegacyLayout(props: ParentProps) {
             void playSoundById(settings.sounds.permissions())
           }
           if (settings.notifications.permissions()) {
-            void platform.notify(title, description, () => navigate(href))
+            void platform.notify(speech, undefined, () => navigate(href))
           }
         }
 
         if (e.details.type === "question.asked") {
           if (settings.notifications.agent()) {
-            void platform.notify(title, description, () => navigate(href))
+            void platform.notify(speech, undefined, () => navigate(href))
           }
         }
 

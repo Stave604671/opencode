@@ -720,6 +720,15 @@ export const dict = {
   "notification.session.error.title": "会话错误",
   "notification.session.error.fallbackDescription": "发生错误",
 
+  "notification.speech.done": "{{task}}弄完了",
+  "notification.speech.doneUnknown": "这一轮弄完了",
+  "notification.speech.error": "{{task}}出问题了：{{reason}}",
+  "notification.speech.errorUnknown": "出问题了：{{reason}}",
+  "notification.speech.permission": "有个权限等你点头：{{detail}}",
+  "notification.speech.permissionBare": "有个权限等你点头",
+  "notification.speech.question": "想跟你确认一下：{{detail}}",
+  "notification.speech.questionBare": "有个事想跟你确认",
+
   "home.recentProjects": "最近项目",
   "home.empty.title": "没有最近项目",
   "home.empty.description": "通过打开本地项目开始使用",

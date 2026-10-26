@@ -30,6 +30,85 @@ export type UpdaterAPI = {
 }
 
 export type LinuxDisplayBackend = "wayland" | "auto"
+
+/**
+ * One sprite family per state. `talking` / `sweeping` / `attention` / `sad` /
+ * `greet` come from the whale sheet; `loafing` is the long-lull pose so a pet
+ * that has been idle for a while keeps moving instead of freezing on one GIF.
+ */
+export type PetState =
+  | "idle"
+  | "thinking"
+  | "working"
+  | "talking"
+  | "sweeping"
+  | "waiting"
+  | "needsinput"
+  | "attention"
+  | "error"
+  | "sad"
+  | "happy"
+  | "greet"
+  | "loafing"
+  | "sleeping"
+
+export type PetSnapshot = {
+  state: PetState
+  sessionID: string | null
+  title: string | null
+  detail: string | null
+  idleMs: number | null
+  at: number
+}
+
+/**
+ * What the chat renderer knows about the session it is showing. The pet is driven
+ * from here rather than from its own event-stream subscription: the app already
+ * owns a live, directory-scoped stream, and a second subscriber has to fight
+ * instance disposal and workspace scoping for the same data.
+ */
+export type PetActivity = {
+  sessionID: string | null
+  state: PetState
+  detail: string | null
+  title: string | null
+}
+
+/**
+ * A line the pet says out loud in its own speech bubble. The desktop renderer
+ * routes OS notifications here while the pet window is on screen, so the user
+ * keeps watching one corner of the screen instead of two.
+ */
+export type PetSpeech = {
+  /** Echoed back on click so the caller can run the notification's action. */
+  id: string
+  title: string
+  detail: string | null
+  tone: "done" | "error" | "info"
+}
+
+export type PetAPI = {
+  getState: () => Promise<PetSnapshot>
+  onState: (cb: (state: PetSnapshot) => void) => () => void
+  report: (activity: PetActivity) => Promise<void>
+  /** Makes the pet say something; resolves false when the pet is not on screen. */
+  say: (speech: PetSpeech) => Promise<boolean>
+  /** Pet window → main: the user clicked the bubble. */
+  sayClick: (id: string) => Promise<void>
+  /** Pet window: a new line to speak. */
+  onSay: (cb: (speech: PetSpeech) => void) => () => void
+  /** Chat window: the user clicked the pet's bubble, run the notification action. */
+  onSayClick: (cb: (id: string) => void) => () => void
+  focusMain: () => Promise<void>
+  /** Grabs the window where it currently sits; `dragTo` is an offset from there. */
+  dragStart: () => Promise<void>
+  dragTo: (dx: number, dy: number) => Promise<void>
+  dragEnd: () => Promise<void>
+  getVisible: () => Promise<boolean>
+  setVisible: (visible: boolean) => Promise<boolean>
+  toggle: () => Promise<boolean>
+  bindSession: (sessionID: string | null) => Promise<void>
+}
 export type TitlebarTheme = {
   mode: "light" | "dark"
   scheme?: "system" | "light" | "dark"
@@ -48,6 +127,7 @@ export type ElectronAPI = {
   awaitInitialization: () => Promise<ServerReadyData>
   wslServers: WslServersAPI
   updater: UpdaterAPI
+  pet: PetAPI
   consumeInitialDeepLinks: () => Promise<string[]>
   getDefaultServerUrl: () => Promise<string | null>
   setDefaultServerUrl: (url: string | null) => Promise<void>

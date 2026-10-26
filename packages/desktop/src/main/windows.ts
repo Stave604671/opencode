@@ -73,9 +73,25 @@ export function setAppQuitting(quitting = true) {
   registry.setQuitting(quitting)
 }
 
+/**
+ * Windows that paint their own background and must never take the chat theme's
+ * colour. The pet is one: setting an opaque `backgroundColor` on a transparent
+ * window makes the compositor flatten the page onto that colour, so the artwork
+ * ends up sitting on a white card.
+ */
+const ownBackground = new Set<number>()
+
+export function keepOwnBackground(win: BrowserWindow) {
+  ownBackground.add(win.id)
+  win.once("closed", () => ownBackground.delete(win.id))
+}
+
 export function setBackgroundColor(color: string) {
   backgroundColor = color
   BrowserWindow.getAllWindows().forEach((win) => {
+    // Every chat window mirrors the theme; windows that own their background are
+    // skipped, including windows created after this point.
+    if (ownBackground.has(win.id)) return
     win.setBackgroundColor(color)
     if (process.platform === "darwin") win.invalidateShadow()
   })
