@@ -1,3 +1,8 @@
+> [!NOTE]
+> **This is a personal fork.** Its only delta from upstream is a desktop pet (whale) for the Electron client.
+> Fork notes, build and reproduction steps: **[README.fork.md](README.fork.md)** ·
+> 这是个人 fork，相对上游只多一个提交：桌面宠物。说明与构建步骤见 **[README.fork.md](README.fork.md)**。
+
 <p align="center">
   <a href="https://opencode.ai">
     <picture>
