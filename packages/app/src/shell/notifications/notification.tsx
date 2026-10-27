@@ -232,16 +232,22 @@ export function createServerNotificationState(input: {
       }
 
       if (hasOpenTab && settings.notifications.agent()) {
+        // The pet reports back in its own words instead of labelling the event: the model's
+        // closing line already says what got done, in this conversation's language and terms.
+        const line = petSpeech({
+          kind: "done",
+          reply: lastReplyText(input.data.message.list(sessionID)),
+          task: session.title,
+          t: language.t,
+        })
         void input.coordinator.system(`${input.key}\0${eventID}`, () =>
-          platform.notify(language.t("notification.session.responseReady.title"), session.title ?? sessionID, () =>
-            openNotificationSession(tabs, input.key, sessionID),
-          ),
+          platform.notify(line, undefined, () => openNotificationSession(tabs, input.key, sessionID), "done"),
         )
       }
     })
   }
 
-  const handleSessionError = (sessionID: string, eventID: string) => {
+  const handleSessionError = (sessionID: string, eventID: string, error: unknown) => {
     void lookup(sessionID).then((session) => {
       if (disposed.value) return
 
@@ -253,13 +259,12 @@ export function createServerNotificationState(input: {
         void input.coordinator.sound(`${input.key}\0${eventID}`, () => playSoundById(settings.sounds.errors()))
       }
 
-      const description = session?.title ?? language.t("notification.session.error.fallbackDescription")
+      const reason = errorReason(error, language.t("notification.session.error.fallbackDescription"))
+      const line = petSpeech({ kind: "error", task: session?.title ?? null, detail: reason, t: language.t })
 
       if (hasOpenTab && settings.notifications.errors()) {
         void input.coordinator.system(`${input.key}\0${eventID}`, () =>
-          platform.notify(language.t("notification.session.error.title"), description, () =>
-            openNotificationSession(tabs, input.key, sessionID),
-          ),
+          platform.notify(line, undefined, () => openNotificationSession(tabs, input.key, sessionID), "error"),
         )
       }
     })
@@ -267,7 +272,7 @@ export function createServerNotificationState(input: {
 
   const unsub = input.sdk.event.listen((event) => {
     if (event.type === "session.execution.failed") {
-      handleSessionError(event.data.sessionID, event.id)
+      handleSessionError(event.data.sessionID, event.id, event.data.error)
 
       return
     }

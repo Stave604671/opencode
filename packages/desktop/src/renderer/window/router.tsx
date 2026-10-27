@@ -8,7 +8,7 @@ export function DesktopMemoryRouter(props: BaseRouterProps & { windowID: string 
   const initialUrl = getLastActiveUrl(props.windowID)
 
   if (initialUrl !== "/") history.set({ value: initialUrl, replace: true, scroll: false })
-  onCleanup(history.listen((value) => { setLastActiveUrl(props.windowID, value); reportBoundSession(value) })))
+  onCleanup(history.listen((value) => { setLastActiveUrl(props.windowID, value); reportBoundSession(value) }))
 
   return <MemoryRouter {...props} history={history} />
 }

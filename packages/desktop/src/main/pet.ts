@@ -4,7 +4,6 @@ import { BrowserWindow, screen } from "electron"
 import type { PetActivity, PetSnapshot, PetSpeech, PetState } from "../preload/types"
 import { getLastFocusedWindow } from "./windows"
 import { keepOwnBackground } from "./windows/appearance"
-import { write as writeLog } from "./native/logging"
 import { getStore } from "./storage/store"
 import { PET_WINDOW_ENABLED_KEY, PET_WINDOW_POSITION_KEY } from "./storage/keys"
 
@@ -71,7 +70,10 @@ let started = false
 let stopped = false
 
 function log(message: string, meta?: Record<string, unknown>) {
-  writeLog("pet", message, meta)
+  // The pet runs outside the Effect layers, so it logs straight to the main-process console and
+  // stays quiet unless debugging is explicitly requested.
+  if (!process.env.OPENCODE_PET_DEBUG) return
+  console.log(`[pet] ${message}`, meta ?? "")
 }
 
 function isEnabled() {

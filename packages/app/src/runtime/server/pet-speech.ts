@@ -130,24 +130,19 @@ export function taskName(title: string | null | undefined) {
 
 /**
  * The last thing the model said in a session, read straight out of the sync
- * store. Typed loosely on purpose: this runs in the notification path, where a
- * shape change should degrade to "no summary", not to a thrown error.
+ * store's message list. Typed loosely on purpose: this runs in the notification
+ * path, where a shape change should degrade to "no summary", not to a thrown
+ * error.
  */
-export function lastReplyText(source: unknown, sessionID?: string | null) {
-  if (!sessionID) return null
-  const data = record(record(source)?.data)
-  const messages = record(data?.message)?.[sessionID]
+export function lastReplyText(messages: unknown) {
   if (!Array.isArray(messages)) return null
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = record(messages[index])
-    if (!message || message.role !== "assistant") continue
-    const id = typeof message.id === "string" ? message.id : null
-    const parts = id ? record(data?.part)?.[id] : undefined
-    if (!Array.isArray(parts)) continue
-    const text = parts
+    if (!message || message.type !== "assistant") continue
+    const content = Array.isArray(message.content) ? message.content : []
+    const text = content
       .map(record)
-      // Synthetic text is the harness talking, not the model.
-      .filter((part) => part && part.type === "text" && part.synthetic !== true)
+      .filter((part) => part && part.type === "text")
       .map((part) => (typeof part?.text === "string" ? part.text : ""))
       .join("\n")
       .trim()

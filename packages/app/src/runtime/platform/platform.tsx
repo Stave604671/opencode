@@ -57,8 +57,13 @@ type PlatformBase = {
   /** Restart the app  */
   restart(): Promise<void>
 
-  /** Send a system notification */
-  notify(title: string, description?: string, onClick?: () => void): Promise<void>
+  /** Send a system notification; `tone` lets a platform draw it in the pet's voice */
+  notify(
+    title: string,
+    description?: string,
+    onClick?: () => void,
+    tone?: "done" | "error" | "info",
+  ): Promise<void>
 
   /** Open a native attachment picker and read selected files sequentially (desktop only) */
   openAttachmentPickerDialog?<Value>(
