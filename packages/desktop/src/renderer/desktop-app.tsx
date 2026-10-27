@@ -27,6 +27,7 @@ import { preloadStoredLocale } from "./startup/locale"
 import { LoadingSplash } from "./startup/splash"
 import { getLastActiveUrl } from "./window/route-storage"
 import { DesktopMemoryRouter } from "./window/router"
+import { usePetActivity, reportBoundSession } from "./pet-activity"
 
 const MigrationStatus = lazy(() => import("./migration-status").then((module) => ({ default: module.MigrationStatus })))
 
@@ -60,6 +61,7 @@ export function DesktopApp(props: { api: ElectronAPI; version: string }) {
   )
 
   const platform = createDesktopPlatform(props.api, windowState)
+  usePetActivity()
   const [sidecar, { mutate: setSidecar }] = createResource(() => props.api.awaitInitialization())
 
   const [locale] = createResource(() => preloadStoredLocale(platform))

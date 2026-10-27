@@ -11,3 +11,7 @@ export const BACKGROUND_COLOR_KEY = "backgroundColor"
 export const WINDOW_IDS_KEY = "windowIds"
 
 export const BUNDLED_CLI_VERSION_KEY = "bundledCliVersion"
+
+export const PET_WINDOW_ENABLED_KEY = "petWindowEnabled"
+
+export const PET_WINDOW_POSITION_KEY = "petWindowPosition"

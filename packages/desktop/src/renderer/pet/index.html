@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenCode Pet</title>
+    <link rel="stylesheet" href="./pet.css" />
+  </head>
+  <body class="state-idle" data-state="idle">
+    <div id="stage">
+      <div id="bubble" class="bubble hidden" role="status" aria-live="polite">
+        <span id="bubble-text"></span>
+        <span id="bubble-sub" class="bubble-sub hidden"></span>
+      </div>
+      <div id="sprite-wrap">
+        <img id="sprite" alt="" draggable="false" />
+        <div id="sleep-mark" class="sleep-mark hidden" aria-hidden="true"><span>z</span><span>z</span></div>
+      </div>
+    </div>
+    <script src="./pet.ts" type="module"></script>
+  </body>
+</html>

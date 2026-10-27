@@ -20,6 +20,7 @@ import { showCliInstaller } from "./native/install-cli"
 import { createMenu, sendMenuCommand } from "./native/menu"
 import { DesktopCli } from "./service/desktop-cli"
 import { getLastFocusedWindow } from "./windows"
+import { registerPetIpc } from "./pet"
 
 const services = Layer.mergeAll(DesktopFiles.layer, Plugins.layer)
 
@@ -84,6 +85,7 @@ export const registerIpcHandlers = Effect.gen(function* () {
   const onWindowCreated = (_event: Electron.Event, win: BrowserWindow) => wire(win)
 
   yield* Effect.sync(() => {
+    registerPetIpc()
     app.on("browser-window-created", onWindowCreated)
     BrowserWindow.getAllWindows().forEach((win) => wire(win))
   })

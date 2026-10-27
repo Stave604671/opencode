@@ -24,6 +24,17 @@ const minZoomLevel = 0.2
 
 let backgroundColor: string | undefined
 
+/**
+ * Windows that paint their own background (the transparent pet) must never
+ * take the chat theme colour: an opaque backgroundColor flattens the artwork.
+ */
+const ownBackground = new Set<number>()
+
+export function keepOwnBackground(win: BrowserWindow) {
+  ownBackground.add(win.id)
+  win.once("closed", () => ownBackground.delete(win.id))
+}
+
 export function windowAppearance(path: Path.Path, paths: DesktopPaths.Resolved) {
   return {
     title: "OpenCode",
@@ -52,6 +63,7 @@ export function setBackgroundColor(color: string) {
   if (getBackgroundColor() !== color) getStore().set(BACKGROUND_COLOR_KEY, color)
   backgroundColor = color
   BrowserWindow.getAllWindows().forEach((win) => {
+    if (ownBackground.has(win.id)) return
     win.setBackgroundColor(color)
 
     if (process.platform === "darwin") win.invalidateShadow()

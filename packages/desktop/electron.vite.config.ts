@@ -131,6 +131,7 @@ const require = __cjs_mod__.createRequire(import.meta.url);
         rolldownOptions: {
           input: {
             main: "src/renderer/index.html",
+          pet: "src/renderer/pet/index.html",
           },
           output: {
             codeSplitting: {

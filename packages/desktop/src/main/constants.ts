@@ -24,3 +24,8 @@ const appIDs: Record<string, string> = {
 export const APP_NAME = app.isPackaged ? appNames[CHANNEL] : "OpenCode Dev"
 
 export const APP_ID = app.isPackaged ? appIDs[CHANNEL] : "ai.opencode.desktop.dev"
+
+// This fork ships a custom pet window and is not published to the upstream
+// release feed, so the official auto-updater must stay off: updating would
+// replace the fork with the stock build. Re-enable only for upstream builds.
+export const UPDATER_ENABLED = false

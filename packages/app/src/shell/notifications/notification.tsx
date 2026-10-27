@@ -1,3 +1,4 @@
+import { errorReason, lastReplyText, petSpeech } from "@/runtime/server/pet-speech"
 import { createEffect, createMemo, onCleanup, untrack } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Schema } from "effect"
