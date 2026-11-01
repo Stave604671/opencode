@@ -1,5 +1,4 @@
 import type { Platform } from "@opencode/app/desktop"
-import type { PetSpeech } from "../../preload/types"
 import type { ElectronAPI } from "../api-types"
 
 type DesktopNotifyAPI = Pick<ElectronAPI, "getWindowFocused" | "showWindow" | "setWindowFocus">

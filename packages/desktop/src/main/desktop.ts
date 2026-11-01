@@ -36,7 +36,6 @@ const runIpc = Effect.fn("Desktop.runIpc")(function* () {
   yield* installContextMenu
   // The pet is a window too, so window-all-closed would never fire. Quit when
   // the last non-pet window goes away instead.
-  const { app } = yield* Effect.sync(() => require("electron"))
   const { BrowserWindow } = yield* Effect.sync(() => require("electron"))
   yield* Effect.sync(() => {
     app.on("browser-window-created", (_e: unknown, win: Electron.BrowserWindow) => {

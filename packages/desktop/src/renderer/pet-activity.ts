@@ -5,37 +5,18 @@
  * observe which session is on screen. The pet is driven from the same sync
  * store the chat UI renders from: one source of truth, no second event stream.
  */
-import { createEffect, createMemo } from "solid-js"
-import { useGlobal, useServer } from "@opencode/app"
-import type { PetState } from "../preload/types"
+import { createEffect, createMemo, createSignal } from "solid-js"
+import { useGlobal, useServers } from "@opencode/app/desktop"
+import type { PetAPI, PetState } from "../preload/types"
 
 declare global {
   interface Window {
-    api?: {
-      pet?: {
-        report: (activity: { sessionID: string | null; state: PetState; detail: string | null; title: string | null }) => Promise<void>
-        bindSession: (sessionID: string | null) => Promise<void>
-      }
-    }
+    api: { pet: PetAPI }
   }
 }
 
-const [boundSession, setBoundSession] = createSignalLocal<string | null>(null)
-
-// Minimal signal without importing solid's createSignal at module level
-let _bs: string | null = null
-const _bsListeners = new Set<(v: string | null) => void>()
-function createSignalLocal<T>(initial: T) {
-  let value = initial
-  const listeners = new Set<(v: T) => void>()
-  return [
-    () => value,
-    (next: T) => {
-      value = next
-      listeners.forEach((l) => l(next))
-    },
-  ] as const
-}
+/** Which session the window is showing, published by the router on every navigation. */
+const [boundSession, setBoundSession] = createSignal<string | null>(null)
 
 export function reportBoundSession(url: string) {
   const match = /\/session\/([^/?#]+)/.exec(url)
@@ -51,99 +32,79 @@ export function reportBoundSession(url: string) {
   void window.api?.pet?.bindSession(sessionID).catch(() => undefined)
 }
 
+/**
+ * The parts of a message this file reads. Typed by hand: the pet only needs four
+ * signals (is a tool running, is prose streaming, did the turn fail, was it
+ * compacting), and a shape change should degrade to "no state", not a crash.
+ */
 type PetPart = {
   type?: string
-  tool?: string
+  name?: string
   text?: string
-  synthetic?: boolean
-  time?: { start?: number; end?: number }
-  state?: { status?: string; title?: string }
+  state?: { status?: string }
 }
 
 type PetMessage = {
-  id: string
-  role?: string
-  error?: { name?: string }
+  type?: string
+  time?: { completed?: number }
+  content?: PetPart[]
+  error?: { type?: string; name?: string; message?: string }
 }
 
-type PetData = {
-  info?: Record<string, { title?: string } | undefined>
-  message?: Record<string, PetMessage[] | undefined>
-  part?: Record<string, PetPart[] | undefined>
-  session_status?: Record<string, { type?: string; attempt?: number } | undefined>
-  permission?: Record<string, Array<{ permission?: string; patterns?: string[] }> | undefined>
-  question?: Record<string, Array<{ questions?: Array<{ header?: string; question?: string }> }> | undefined>
+function latest(messages: PetMessage[], type: string) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]
+    if (message?.type === type) return message
+  }
+  return undefined
 }
 
-function runningTool(parts: PetPart[] | undefined) {
-  if (!parts) return null
-  for (let i = parts.length - 1; i >= 0; i -= 1) {
-    const part = parts[i]
+function runningTool(message: PetMessage | undefined) {
+  const content = message?.content ?? []
+  for (let index = content.length - 1; index >= 0; index -= 1) {
+    const part = content[index]
     if (!part) continue
     if (part.type === "tool") {
       const status = part.state?.status
-      if (status === "running" || status === "pending") return part.state?.title || part.tool || "tool"
+      if (status === "streaming" || status === "pending" || status === "running") return part.name || "tool"
       return null
     }
-    if (part.type === "text" || part.type === "reasoning" || part.type === "step-start") return null
-    if (part.type === "retry" || part.type === "step-finish") return null
+    if (part.type === "text" || part.type === "reasoning") return null
   }
   return null
 }
 
-function latestParts(data: PetData, sessionID: string) {
-  const messages = data.message?.[sessionID]
-  if (!messages) return { parts: undefined, error: null as string | null, aborted: false }
-  for (let i = messages.length - 1; i >= 0; i -= 1) {
-    const message = messages[i]
-    if (!message || message.role !== "assistant") continue
-    const parts = data.part?.[message.id]
-    const aborted = message.error?.name === "MessageAbortedError"
-    const error = message.error && !aborted ? "这一轮出错了" : null
-    if (parts && parts.length > 0) return { parts, error, aborted }
-    if (error || aborted) return { parts: undefined, error, aborted }
-  }
-  return { parts: undefined, error: null as string | null, aborted: false }
-}
-
-function streamingAnswer(parts: PetPart[] | undefined) {
-  if (!parts) return false
-  for (let i = parts.length - 1; i >= 0; i -= 1) {
-    const part = parts[i]
+function streamingAnswer(message: PetMessage | undefined) {
+  const content = message?.content ?? []
+  for (let index = content.length - 1; index >= 0; index -= 1) {
+    const part = content[index]
     if (!part) continue
-    if (part.type === "text") {
-      if (part.synthetic) return false
-      return part.time?.end === undefined && Boolean(part.text?.trim())
-    }
-    if (part.type === "tool" || part.type === "reasoning" || part.type === "step-start") return false
-    if (part.type === "compaction" || part.type === "retry" || part.type === "step-finish") return false
+    if (part.type === "text") return message?.time?.completed === undefined && Boolean(part.text?.trim())
+    if (part.type === "tool" || part.type === "reasoning") return false
   }
   return false
 }
 
-function compacting(parts: PetPart[] | undefined) {
-  if (!parts) return false
-  for (let i = parts.length - 1; i >= 0; i -= 1) {
-    const part = parts[i]
-    if (!part) continue
-    if (part.type === "compaction") return true
-    if (part.type === "step-finish" || part.type === "tool") return false
-  }
-  return false
+function interrupted(message: PetMessage | undefined) {
+  const name = message?.error?.type ?? message?.error?.name ?? ""
+  return /abort/i.test(name)
 }
 
 const GREET_WINDOW_MS = 3000
 
 /**
- * Drives the desktop pet from the state the chat UI renders. Called from
- * DesktopApp's effect scope so it tears down with the window.
+ * Drives the desktop pet from the state the chat UI renders. Called from a
+ * component mounted under the app providers so it tears down with the window.
  */
 export function usePetActivity() {
   const global = useGlobal()
-  const server = useServer()
-  const sync = createMemo(() => {
-    const conn = server.current
-    return conn ? global.ensureServerCtx(conn).sync : undefined
+  const servers = useServers()
+
+  // The window follows its own server: the bundled sidecar, or whichever server
+  // served this window when it is not the sidecar.
+  const store = createMemo(() => {
+    const conn = servers.visible.find((candidate) => servers.current(candidate)) ?? servers.visible[0]
+    return conn ? global.ensureServerCtx(conn).data : undefined
   })
 
   let sent = ""
@@ -161,7 +122,7 @@ export function usePetActivity() {
 
   createEffect(() => {
     const sessionID = boundSession()
-    const current = sync()
+    const data = store()
     if (sessionID !== session) {
       session = sessionID
       wasBusy = false
@@ -173,59 +134,57 @@ export function usePetActivity() {
       send("idle", null, null, null)
       return
     }
-    if (!current) return
+    if (!data) return
 
-    const data = current.session.data as unknown as PetData
-    const title = data.info?.[sessionID]?.title ?? null
-    const status = data.session_status?.[sessionID]
-    const busy = (status?.type ?? "idle") !== "idle"
-    const { parts, error, aborted } = latestParts(data, sessionID)
+    const title = data.session.get(sessionID)?.title ?? null
+    const busy = data.session.status(sessionID) === "running"
+    const messages = data.session.message.list(sessionID) as unknown as PetMessage[]
+    const permission = data.session.permission.list(sessionID)?.[0]
+    const form = data.session.form.list(sessionID)?.[0]
+    const assistant = latest(messages, "assistant")
 
-    const permission = data.permission?.[sessionID]?.[0]
+    const permissionLine = permission
+      ? [permission.action, permission.resources?.[0]].filter((part) => typeof part === "string" && part).join(" ")
+      : ""
+
     if (permission) {
-      send("waiting", "有个权限等你点头", title, sessionID)
+      send("waiting", permissionLine || "有个权限等你点头", title, sessionID)
       wasBusy = busy
       return
     }
-    const question = data.question?.[sessionID]?.[0]
-    if (question) {
-      send("needsinput", "有个事想跟你确认", title, sessionID)
+    if (form) {
+      send("needsinput", form.title || "有个事想跟你确认", title, sessionID)
       wasBusy = busy
-      return
-    }
-    if (status?.type === "retry") {
-      send("attention", "重试 " + (status.attempt ?? 1), title, sessionID)
-      wasBusy = true
       return
     }
     if (busy) {
-      if (compacting(parts)) {
+      if (latest(messages, "compaction")) {
         send("sweeping", "整理上下文", title, sessionID)
         wasBusy = true
         return
       }
-      const tool = runningTool(parts)
+      const tool = runningTool(assistant)
       if (tool) {
         send("working", tool, title, sessionID)
         wasBusy = true
         return
       }
-      send(streamingAnswer(parts) ? "talking" : "thinking", null, title, sessionID)
+      send(streamingAnswer(assistant) ? "talking" : "thinking", null, title, sessionID)
       wasBusy = true
       return
     }
-    if (aborted) {
+    const failure = assistant?.error?.message
+    if (failure && interrupted(assistant)) {
       send("sad", "这一轮我停了", title, sessionID)
       wasBusy = false
       return
     }
-    if (error) {
-      send("error", error, title, sessionID)
+    if (failure) {
+      send("error", "这一轮出错了", title, sessionID)
       wasBusy = false
       return
     }
-    const messages = data.message?.[sessionID]
-    if (!messages || messages.length === 0) {
+    if (messages.length === 0) {
       if (greeted !== sessionID) {
         greeted = sessionID
         greetUntil = Date.now() + GREET_WINDOW_MS

@@ -27,7 +27,7 @@ import { preloadStoredLocale } from "./startup/locale"
 import { LoadingSplash } from "./startup/splash"
 import { getLastActiveUrl } from "./window/route-storage"
 import { DesktopMemoryRouter } from "./window/router"
-import { usePetActivity, reportBoundSession } from "./pet-activity"
+import { usePetActivity } from "./pet-activity"
 
 const MigrationStatus = lazy(() => import("./migration-status").then((module) => ({ default: module.MigrationStatus })))
 
@@ -61,7 +61,6 @@ export function DesktopApp(props: { api: ElectronAPI; version: string }) {
   )
 
   const platform = createDesktopPlatform(props.api, windowState)
-  usePetActivity()
   const [sidecar, { mutate: setSidecar }] = createResource(() => props.api.awaitInitialization())
 
   const [locale] = createResource(() => preloadStoredLocale(platform))
@@ -120,6 +119,7 @@ export function DesktopApp(props: { api: ElectronAPI; version: string }) {
             onReady={() => setStartup("onboardingReady", true)}
           />
           <DesktopEffects api={props.api} />
+          <DesktopPet />
           <Suspense fallback={null}>
             <Show when={initializationData(sidecar)} keyed>
               {(server) => <MigrationStatus server={server} />}
@@ -178,6 +178,12 @@ function DesktopStartupReady(props: {
     props.onReady()
   })
 
+  return null
+}
+
+// The pet reads the same store the chat UI renders, so it has to mount inside the app providers.
+function DesktopPet() {
+  usePetActivity()
   return null
 }
 

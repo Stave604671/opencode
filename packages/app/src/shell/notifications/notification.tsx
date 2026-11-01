@@ -236,7 +236,7 @@ export function createServerNotificationState(input: {
         // closing line already says what got done, in this conversation's language and terms.
         const line = petSpeech({
           kind: "done",
-          reply: lastReplyText(input.data.message.list(sessionID)),
+          reply: lastReplyText(input.data.session.message.list(sessionID)),
           task: session.title,
           t: language.t,
         })
