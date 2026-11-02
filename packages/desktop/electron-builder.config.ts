@@ -33,7 +33,7 @@ const previewCompressionFpm = (target: "deb" | "rpm") => [`--${target}-compressi
 function resolveChannel() {
   const raw = process.env.OPENCODE_CHANNEL
 
-  if (raw === "dev" || raw === "beta" || raw === "prod") return raw
+  if (raw === "dev" || raw === "beta" || raw === "prod" || raw === "gift") return raw
 
   if (raw === "latest") return "prod"
 
@@ -44,6 +44,7 @@ const APP_IDS = {
   dev: "ai.opencode.desktop.dev",
   beta: "ai.opencode.desktop.beta",
   prod: "ai.opencode.desktop",
+  gift: "ai.phila.gift",
 } as const
 
 // libappimage (used by AppImageLauncher) resolves the .desktop entry inside an
@@ -64,9 +65,9 @@ const getBase = (appId: string): Configuration => {
   const desktopName = `${appId}.desktop`
 
   return {
-    artifactName: "opencode-desktop-${os}-${arch}.${ext}",
+    artifactName: appId === "ai.phila.gift" ? "phila-gift-${os}-${arch}.${ext}" : "opencode-desktop-${os}-${arch}.${ext}",
     directories: {
-      output: "dist",
+      output: appId === "ai.phila.gift" ? "dist-gift" : "dist",
       buildResources: "resources",
     },
     // Linux launchers are .desktop files, so this is the desktop file name,
@@ -252,6 +253,25 @@ export function getConfig() {
         },
         deb: { fpm: [metainfoFpm(appId), legacyDesktopEntryFpm] },
         rpm: { packageName: "opencode", fpm: [rpmNoBuildIdLinksFpm, metainfoFpm(appId), legacyDesktopEntryFpm] },
+      }
+    }
+
+    case "gift": {
+      return {
+        ...base,
+        appId,
+        productName: "PhilaGift",
+        protocols: { name: "PhilaGift", schemes: ["phila"] },
+        win: {
+          ...base.win,
+          executableName: "PhilaGift",
+          signAndEditExecutable: false,
+        },
+        publish: {
+          provider: "generic",
+          url: "https://example.invalid/",
+          channel: "latest",
+        },
       }
     }
   }

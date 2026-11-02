@@ -2,11 +2,17 @@ import { resolveChannel } from "./utils"
 
 const arg = process.argv[2]
 
-const channel = arg === "dev" || arg === "beta" || arg === "prod" ? arg : resolveChannel()
+const channel = arg === "dev" || arg === "beta" || arg === "prod" || arg === "gift" ? arg : resolveChannel()
 
-const appId = channel === "prod" ? "ai.opencode.desktop" : `ai.opencode.desktop.${channel}`
+const appId =
+  channel === "gift" ? "ai.phila.gift" : channel === "prod" ? "ai.opencode.desktop" : `ai.opencode.desktop.${channel}`
 
-const productName = channel === "prod" ? "OpenCode" : `OpenCode ${channel.charAt(0).toUpperCase() + channel.slice(1)}`
+const productName =
+  channel === "gift"
+    ? "PhilaGift"
+    : channel === "prod"
+      ? "OpenCode"
+      : `OpenCode ${channel.charAt(0).toUpperCase() + channel.slice(1)}`
 
 const summary = `Open source AI coding agent${channel !== "prod" ? ` (${channel})` : ""}`
 

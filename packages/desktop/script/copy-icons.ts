@@ -3,9 +3,11 @@ import { resolveChannel } from "./utils"
 
 const arg = process.argv[2]
 
-const channel = arg === "dev" || arg === "beta" || arg === "prod" ? arg : resolveChannel()
+const channel = arg === "dev" || arg === "beta" || arg === "prod" || arg === "gift" ? arg : resolveChannel()
 
-const src = `./icons/${channel}`
+const iconChannel = channel === "gift" ? "dev" : channel
+
+const src = `./icons/${iconChannel}`
 
 const dest = "resources/icons"
 

@@ -7,7 +7,7 @@ import { nodePtyPackage } from "./script/utils"
 function resolveChannel() {
   const raw = process.env.OPENCODE_CHANNEL
 
-  if (raw === "local" || raw === "dev" || raw === "beta" || raw === "prod") return raw
+  if (raw === "local" || raw === "dev" || raw === "beta" || raw === "prod" || raw === "gift") return raw
 
   if (raw === "latest") return "prod"
 
