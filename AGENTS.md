@@ -189,3 +189,12 @@ const table = sqliteTable("session", {
 - Keep delivery vocabulary explicit. Prompts steer by default. At safe step boundaries, steered compaction takes priority up to the first steered move control; other steers retain enqueue order. At an idle boundary, steers take priority; otherwise exactly one queued item delivers before the runner reevaluates continuation. Inbox items may be cancelled or changed between queue and steer before delivery. Promoting new user input resets the selected agent's step allowance; a batch of steers resets it once.
 - One step is one logical LLM call; its durable record covers only the model-visible span. Do not write "provider turn", and do not use bare "turn" for a single call: "turn" is reserved for the future assistant-turn unit containing all steps from prompt promotion until the session would go idle.
 - Keep event replay ownership separate from clustered Session execution ownership.
+
+## 工作留痕与日报（项目规则）
+
+- **思考底稿必须留痕。** 每完成一份设计、调研、方案或会议纪要，立即 `git add` 该文件并提交。提交时间戳即工作过程的时间锚点。
+- **只提交工作产物。** 每次提交前先看 `git status` 与 `git diff`，不把无关改动、临时文件、密钥或大体积二进制一起提交。
+- **提交信息格式**：`docs(worklog): <主题> (YYYY-MM-DD)`；涉及代码时用对应的 `type(scope): summary`。
+- **日报触发**：用户说"休息了""今天到这"时，整理当天进度，写 `worklog/YYYY-MM-DD.md` 并提交。
+- **日报结构**：今日目标 / 完成事项 / 关键结论 / 未决问题 / 明日计划 / 相关提交（含 commit hash）。
+- **不追补历史。** 只对规则生效之后的产出留痕；之前的未提交内容不强行编造时间线。
