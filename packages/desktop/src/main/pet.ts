@@ -6,6 +6,7 @@ import { getLastFocusedWindow } from "./windows"
 import { keepOwnBackground } from "./windows/appearance"
 import { getStore } from "./storage/store"
 import { PET_WINDOW_ENABLED_KEY, PET_WINDOW_POSITION_KEY } from "./storage/keys"
+import { windowArguments } from "./windows/bootstrap"
 
 const root = dirname(fileURLToPath(import.meta.url))
 const rendererProtocol = "oc"
@@ -223,7 +224,8 @@ export function createPetWindow() {
     alwaysOnTop: true,
     title: "OpenCode Pet",
     webPreferences: {
-      preload: join(root, "../preload/index.js"),
+      preload: join(root, "../preload/index.cjs"),
+      additionalArguments: windowArguments("pet"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
