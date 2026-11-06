@@ -3,6 +3,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { app, BrowserWindow, screen, shell } from "electron"
 import { Predicate } from "effect"
+import { CHANNEL } from "../constants"
 import { resolveExternalURL } from "../files/external-url"
 import { windowArguments } from "./bootstrap"
 import { WINDOW_IDS_KEY } from "../storage/keys"
@@ -48,7 +49,8 @@ export function createEarlyWindow() {
     y: state.y,
     width: state.width,
     height: state.height,
-    show: true,
+    // The gift app starts as a desktop pet; the work window waits for a double-click.
+    show: CHANNEL !== "gift",
     autoHideMenuBar: true,
     title: "OpenCode",
     icon: path.join(icons, `icon.${process.platform === "win32" ? "ico" : "png"}`),

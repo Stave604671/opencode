@@ -8,7 +8,14 @@ import { emitIpcEvent } from "../ipc-events"
 import { DesktopLogging, scoped } from "../native/logging"
 import { DesktopStorage } from "../storage"
 import { safeWebContentsURL } from "../windows/state"
-import { getLastFocusedWindow, getWindowByID, mainWindows, setAppQuitting, setRelaunchHandler } from "../windows"
+import {
+  getLastFocusedWindow,
+  getMainWindows,
+  getWindowByID,
+  mainWindows,
+  setAppQuitting,
+  setRelaunchHandler,
+} from "../windows"
 import { marks } from "./marks"
 import { initializeFirstLaunchOnboarding } from "./onboarding"
 import { Shutdown } from "./shutdown"
@@ -93,7 +100,7 @@ const runtime = Layer.effect(
         focusWindow(emitDeepLinks(urls) ?? null)
       }
 
-      if (!urls.length) focusWindow(getLastFocusedWindow())
+      if (!urls.length) focusWindow(getLastFocusedWindow() ?? getMainWindows()[0] ?? null)
     }
 
     const openUrl = (event: Event, url: string) => {

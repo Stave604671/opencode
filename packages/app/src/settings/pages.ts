@@ -15,7 +15,8 @@ export const pageIcons = {
   servers: "server",
   experimental: "flask",
   about: "info",
-} as const satisfies Record<SettingsRootTab, IconProps["name"]>
+  permissions: "lock",
+} as const satisfies Record<SettingsRootTab | "permissions", IconProps["name"]>
 
 export const pageLabels = {
   general: "settings.tab.preferences",
@@ -30,4 +31,5 @@ export const pageLabels = {
   servers: "settings.section.server",
   experimental: "settings.tab.experimental",
   about: "settings.tab.about",
-} as const satisfies Record<SettingsRootTab, Parameters<ReturnType<typeof useLanguage>["t"]>[0]>
+  permissions: "settings.tab.permissions",
+} as const satisfies Record<SettingsRootTab | "permissions", Parameters<ReturnType<typeof useLanguage>["t"]>[0]>

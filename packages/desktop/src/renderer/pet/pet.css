@@ -43,8 +43,8 @@ body.dragging {
 
 #sprite-wrap {
   position: relative;
-  width: 184px;
-  height: 184px;
+  width: var(--sprite-size, 184px);
+  height: var(--sprite-size, 184px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -195,7 +195,7 @@ body.state-happy #sprite {
 
 .bubble {
   position: relative;
-  max-width: 190px;
+  max-width: min(190px, calc(100% - 20px));
   padding: 6px 10px;
   border-radius: 12px;
   background: rgb(255 255 255 / 0.97);

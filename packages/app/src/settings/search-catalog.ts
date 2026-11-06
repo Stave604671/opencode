@@ -4,7 +4,7 @@ import type { SettingsProjectTab, SettingsRootTab, SettingsServerTab } from "./s
 type Label = Parameters<ReturnType<typeof useLanguage>["t"]>[0]
 
 // Metadata only: search must not mount settings pages or fetch their catalogs.
-type Entry<Tab> = {
+export type Entry<Tab> = {
   tab: Tab
   label: Label
   target?: string

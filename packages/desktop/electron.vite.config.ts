@@ -27,7 +27,11 @@ const initialChunk: Plugin = {
   renderStart() {
     const entries = [...this.getModuleIds()].filter((id) => this.getModuleInfo(id)?.isEntry)
     initialGraph.clear()
-    entries.forEach((id) => initialGraph.add(id))
+    // Only the main renderer entry shares the "app" chunk. The pet window is a separate
+    // entry and must get its own bundle; grouping both entries into "app" makes
+    // pet/index.html load the main app instead of pet.ts.
+    const mainEntry = entries.find((id) => id.includes("renderer/index.html") && !id.includes("/pet/"))
+    if (mainEntry) initialGraph.add(mainEntry)
 
     // A Set's iterator also visits members added while iterating, so this reaches every static import.
     for (const id of initialGraph) this.getModuleInfo(id)?.importedIds.forEach((imported) => initialGraph.add(imported))
@@ -131,7 +135,8 @@ const require = __cjs_mod__.createRequire(import.meta.url);
         rolldownOptions: {
           input: {
             main: "src/renderer/index.html",
-          pet: "src/renderer/pet/index.html",
+            pet: "src/renderer/pet/index.html",
+            persona: "src/renderer/persona/index.html",
           },
           output: {
             codeSplitting: {

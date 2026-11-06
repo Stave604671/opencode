@@ -7,6 +7,14 @@ export type ElectronNative = {
   storageSnapshot: Promise<StorageSnapshot>
   plugins: Promise<WindowSnapshot["plugins"]>
   getPathForFile(file: File): string
+  gift: {
+    getDataDir(): Promise<string>
+    chooseDataDir(): Promise<string | null>
+    getPersona(): Promise<string>
+    savePersona(text: string): Promise<void>
+    resetPersona(): Promise<string>
+    log(entry: Record<string, unknown>): Promise<void>
+  }
 }
 
 export type PetState = "idle" | "thinking" | "working" | "talking" | "sweeping" | "waiting" | "needsinput" | "attention" | "error" | "sad" | "happy" | "greet" | "loafing" | "sleeping"
@@ -26,6 +34,8 @@ export type PetAPI = {
   onSay: (cb: (speech: PetSpeech) => void) => () => void
   onSayClick: (cb: (id: string) => void) => () => void
   focusMain: () => Promise<void>
+  reveal: () => Promise<void>
+  contextMenu: () => Promise<void>
   dragStart: () => Promise<void>
   dragTo: (dx: number, dy: number) => Promise<void>
   dragEnd: () => Promise<void>

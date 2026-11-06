@@ -1,24 +1,23 @@
-import idleSprite from "./assets/whale/whale-idle.gif"
-import happySprite from "./assets/whale/whale-happy.gif"
-import sleepSprite from "./assets/whale/whale-sleeping.gif"
-import sleepSprite2 from "./assets/whale/whale-sleeping-2.gif"
-import thinkSprite from "./assets/whale/whale-thinking.gif"
-import waitSprite from "./assets/whale/whale-waiting.gif"
-import workSprite from "./assets/whale/whale-working.gif"
-import workSprite2 from "./assets/whale/whale-working-2.gif"
-import workSprite3 from "./assets/whale/whale-working-3.gif"
-import workSprite4 from "./assets/whale/whale-working-4.gif"
-import talkSprite from "./assets/whale/whale-talking.gif"
-import sweepSprite from "./assets/whale/whale-sweeping.gif"
-import askSprite from "./assets/whale/whale-needsinput.gif"
-import attentionSprite from "./assets/whale/whale-attention.gif"
-import errorSprite from "./assets/whale/whale-error.gif"
-import sadSprite from "./assets/whale/whale-sad.gif"
-import greetSprite from "./assets/whale/whale-greet.gif"
-import loafSprite from "./assets/whale/whale-loafing.gif"
-import loafSprite2 from "./assets/whale/whale-loafing-2.gif"
-import loafSprite3 from "./assets/whale/whale-loafing-3.gif"
-import roamSprite from "./assets/whale/whale-roam.gif"
+import idleSprite from "./assets/whale/whale-idle-static.webp"
+import happySprite from "./assets/whale/whale-happy.webp"
+import sleepSprite from "./assets/whale/whale-sleeping.webp"
+import sleepSprite2 from "./assets/whale/whale-sleeping-2.webp"
+import thinkSprite from "./assets/whale/whale-thinking.webp"
+import waitSprite from "./assets/whale/whale-waiting.webp"
+import workSprite from "./assets/whale/whale-working.webp"
+import workSprite2 from "./assets/whale/whale-working-2.webp"
+import workSprite3 from "./assets/whale/whale-working-3.webp"
+import workSprite4 from "./assets/whale/whale-working-4.webp"
+import talkSprite from "./assets/whale/whale-talking.webp"
+import sweepSprite from "./assets/whale/whale-sweeping.webp"
+import askSprite from "./assets/whale/whale-needsinput.webp"
+import attentionSprite from "./assets/whale/whale-attention.webp"
+import errorSprite from "./assets/whale/whale-error.webp"
+import sadSprite from "./assets/whale/whale-sad.webp"
+import greetSprite from "./assets/whale/whale-greet.webp"
+import loafSprite from "./assets/whale/whale-loafing.webp"
+import loafSprite2 from "./assets/whale/whale-loafing-2.webp"
+import roamSprite from "./assets/whale/whale-roam.webp"
 
 import type { PetSnapshot, PetSpeech, PetState } from "../../preload/types"
 
@@ -52,7 +51,7 @@ const SPRITES: Record<PetState, string> = {
 const POOLS: Partial<Record<PetState, string[]>> = {
   working: [workSprite, workSprite2, workSprite3, workSprite4],
   sleeping: [sleepSprite, sleepSprite2],
-  loafing: [loafSprite, loafSprite2, loafSprite3, roamSprite],
+  loafing: [loafSprite, loafSprite2, idleSprite, roamSprite],
 }
 
 /** How long one pose in a pool stays up before the next one takes over. */
@@ -288,7 +287,23 @@ bubble.addEventListener("click", () => {
 
 let drag: { x: number; y: number; moved: number } | null = null
 let moving = false
+let lastClick = 0
+let lastReveal = 0
 const CLICK_SLOP = 4
+
+function keepAwake() {
+  const now = performance.now()
+  if (now - lastReveal < 2_000) return
+  lastReveal = now
+  void window.api.pet.reveal().catch(() => undefined)
+}
+
+stage.addEventListener("pointerenter", keepAwake)
+stage.addEventListener("pointermove", keepAwake)
+stage.addEventListener("contextmenu", (event) => {
+  event.preventDefault()
+  void window.api.pet.contextMenu().catch(() => undefined)
+})
 
 stage.addEventListener("pointerdown", (event) => {
   if (event.button !== 0) return
@@ -327,13 +342,30 @@ function endDrag(click: boolean) {
   drag = null
   document.body.classList.remove("dragging")
   void window.api.pet.dragEnd().catch(() => undefined)
-  if (click && moved < CLICK_SLOP) void window.api.pet.focusMain().catch(() => undefined)
+  if (!click || moved >= CLICK_SLOP) return
+
+  const now = performance.now()
+  if (now - lastClick < 350) {
+    lastClick = 0
+    void window.api.pet.focusMain().catch(() => undefined)
+    return
+  }
+  lastClick = now
+  void window.api.pet.reveal().catch(() => undefined)
 }
 
 window.addEventListener("pointerup", () => endDrag(true))
 window.addEventListener("pointercancel", () => endDrag(false))
 
 // ---------- boot ----------
+
+function fitSprite() {
+  const size = Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.84)
+  document.documentElement.style.setProperty("--sprite-size", `${size}px`)
+}
+
+fitSprite()
+window.addEventListener("resize", fitSprite)
 
 void window.api.pet
   .getState()

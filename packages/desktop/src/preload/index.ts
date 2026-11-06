@@ -30,6 +30,14 @@ contextBridge.exposeInMainWorld("electron", {
   storageSnapshot: snapshot.then((snapshot) => snapshot.storage),
   plugins: snapshot.then((snapshot) => snapshot.plugins),
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
+  gift: {
+    getDataDir: () => ipcRenderer.invoke("gift-get-data-dir"),
+    chooseDataDir: () => ipcRenderer.invoke("gift-choose-data-dir"),
+    getPersona: () => ipcRenderer.invoke("gift-get-persona"),
+    savePersona: (text: string) => ipcRenderer.invoke("gift-save-persona", text),
+    resetPersona: () => ipcRenderer.invoke("gift-reset-persona"),
+    log: (entry: Record<string, unknown>) => ipcRenderer.invoke("gift-log", entry),
+  },
 })
 
 contextBridge.exposeInMainWorld("api", {
@@ -54,6 +62,8 @@ contextBridge.exposeInMainWorld("api", {
       return () => ipcRenderer.removeListener("pet-say-click", h)
     },
     focusMain: () => ipcRenderer.invoke("pet-focus-main"),
+    reveal: () => ipcRenderer.invoke("pet-reveal"),
+    contextMenu: () => ipcRenderer.invoke("pet-context-menu"),
     dragStart: () => ipcRenderer.invoke("pet-drag-start"),
     dragTo: (dx: number, dy: number) => ipcRenderer.invoke("pet-drag-move", dx, dy),
     dragEnd: () => ipcRenderer.invoke("pet-drag-end"),

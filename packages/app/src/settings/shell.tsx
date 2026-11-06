@@ -28,6 +28,7 @@ import { SettingsAbout } from "./about/about"
 import { SettingsServerDataScope } from "./server-scope"
 import { SettingsNavigation, type SettingsNavGroup } from "./navigation"
 import { SettingsProjectGeneral } from "./workspaces/project"
+import { SettingsProjectPermissions } from "./workspaces/project-permissions"
 import { ProjectSettingsExtensions } from "./workspaces/project-extensions"
 import { useSettingsSurface } from "./surface"
 import { settingsViewRedirect } from "./route"
@@ -70,6 +71,7 @@ const nestedProjectTabs = [
   { value: "general", icon: pageIcons.projects, label: "settings.general.section.general" },
   { value: "workspaces", icon: pageIcons.workspaces, label: "settings.tab.workspaces" },
   { value: "extensions", icon: pageIcons.extensions, label: "settings.tab.extensions" },
+  { value: "permissions", icon: "lock", label: "settings.tab.permissions" },
 ] as const
 
 export function SettingsScreen() {
@@ -457,6 +459,9 @@ function ProjectSettings(props: { server: ServerConnection.Any; project: LocalPr
           </Tabs.Content>
           <Tabs.Content value="extensions" class="settings-panel">
             <ProjectSettingsExtensions subtab={surface.view().subtab} onSubtab={(value) => surface.subtab(value)} />
+          </Tabs.Content>
+          <Tabs.Content value="permissions" class="settings-panel">
+            <SettingsProjectPermissions project={props.project} />
           </Tabs.Content>
         </SettingsNavigation>
       </LocationProvider>

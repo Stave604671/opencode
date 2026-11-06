@@ -15,3 +15,4 @@ export const BUNDLED_CLI_VERSION_KEY = "bundledCliVersion"
 export const PET_WINDOW_ENABLED_KEY = "petWindowEnabled"
 
 export const PET_WINDOW_POSITION_KEY = "petWindowPosition"
+export const PET_WINDOW_SIZE_KEY = "petWindowSize"

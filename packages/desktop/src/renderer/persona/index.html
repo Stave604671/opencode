@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>性格设置</title>
+    <link rel="stylesheet" href="./persona.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>性格设置</h1>
+        <p>只改人格和说话风格；定时主动、每日日记总结不受影响。保存后新会话生效。</p>
+      </header>
+      <textarea id="persona" aria-label="人格设定" spellcheck="false"></textarea>
+      <footer>
+        <button id="reset" type="button">恢复默认</button>
+        <span id="status" role="status"></span>
+        <button id="save" type="button">保存</button>
+      </footer>
+    </main>
+    <script src="./persona.ts" type="module"></script>
+  </body>
+</html>

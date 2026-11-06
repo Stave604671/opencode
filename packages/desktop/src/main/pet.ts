@@ -1,23 +1,35 @@
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { BrowserWindow, screen } from "electron"
+import { app, BrowserWindow, Menu, screen } from "electron"
 import type { PetActivity, PetSnapshot, PetSpeech, PetState } from "../preload/types"
-import { getLastFocusedWindow } from "./windows"
+import { getLastFocusedWindow, setAppQuitting } from "./windows"
+import { openPersonaWindow } from "./persona"
+import { appendWorklog } from "./gift"
 import { keepOwnBackground } from "./windows/appearance"
 import { getStore } from "./storage/store"
-import { PET_WINDOW_ENABLED_KEY, PET_WINDOW_POSITION_KEY } from "./storage/keys"
+import { PET_WINDOW_ENABLED_KEY, PET_WINDOW_POSITION_KEY, PET_WINDOW_SIZE_KEY } from "./storage/keys"
 import { windowArguments } from "./windows/bootstrap"
 
 const root = dirname(fileURLToPath(import.meta.url))
 const rendererProtocol = "oc"
 const rendererHost = "renderer"
 
-const PET_WIDTH = 220
-const PET_HEIGHT = 260
+const PET_SIZES = {
+  small: { width: 170, height: 200 },
+  medium: { width: 220, height: 260 },
+  large: { width: 280, height: 330 },
+} as const
+export type PetSize = keyof typeof PET_SIZES
+const DEFAULT_PET_SIZE: PetSize = "medium"
+let petSize: PetSize = readPetSize()
 const TICK_MS = 1000
 /** Lull before the pet stops sitting still and starts loafing around instead. */
-const LOAF_AFTER_MS = 90 * 1000
-const SLEEP_AFTER_MS = 5 * 60 * 1000
+const LOAF_AFTER_MS = 15 * 60 * 1000
+const SLEEP_AFTER_MS = 60 * 60 * 1000
+/** Quiet time before the pet tucks itself against a screen edge. */
+const HIDE_AFTER_MS = 60 * 1000
+/** How much of the pet stays visible while tucked away. */
+const EDGE_VISIBLE = 64
 
 /**
  * Reactions with a lifetime. The trigger behind each one (a finished turn, a
@@ -69,6 +81,38 @@ let ticker: NodeJS.Timeout | null = null
 let lastPublished: string | null = null
 let started = false
 let stopped = false
+let lastTouch = Date.now()
+let edgeHidden = false
+let edgeSide: "left" | "right" | null = null
+let restoreBounds: { x: number; y: number } | null = null
+
+function readPetSize(): PetSize {
+  const value = getStore().get(PET_WINDOW_SIZE_KEY)
+  return value === "small" || value === "medium" || value === "large" ? value : DEFAULT_PET_SIZE
+}
+
+function petWidth() {
+  return PET_SIZES[petSize].width
+}
+
+function petHeight() {
+  return PET_SIZES[petSize].height
+}
+
+export function setPetSize(next: PetSize) {
+  if (!(next in PET_SIZES) || next === petSize) return
+  const previous = petSize
+  petSize = next
+  getStore().set(PET_WINDOW_SIZE_KEY, next)
+  if (petWindow && !petWindow.isDestroyed()) {
+    const bounds = petWindow.getBounds()
+    const position = clampToWorkArea(bounds.x, bounds.y)
+    petWindow.setBounds({ ...position, width: petWidth(), height: petHeight() })
+  }
+  touchPet()
+  appendWorklog({ action: "pet.size", previous, next })
+  log("pet size changed", { previous, next })
+}
 
 function log(message: string, meta?: Record<string, unknown>) {
   // The pet runs outside the Effect layers, so it logs straight to the main-process console and
@@ -88,6 +132,8 @@ export function registerPetIpc() {
   ipcMain.handle("pet-report", (_e: unknown, activity: PetActivity) => { reportPetActivity(activity) })
   ipcMain.handle("pet-get-visible", () => isPetVisible())
   ipcMain.handle("pet-focus-main", () => focusMainWindow())
+  ipcMain.handle("pet-context-menu", () => showPetMenu())
+  ipcMain.handle("pet-reveal", () => revealPet())
   ipcMain.handle("pet-drag-start", () => beginPetDrag())
   ipcMain.handle("pet-drag-move", (_e: unknown, dx: number, dy: number) => dragPet(dx, dy))
   ipcMain.handle("pet-drag-end", () => endPetDrag())
@@ -108,7 +154,7 @@ export function startPet() {
   createPetWindow()
   if (stopped) return
   if (!ticker) {
-    ticker = setInterval(publish, TICK_MS)
+    ticker = setInterval(tick, TICK_MS)
     ticker.unref()
   }
 }
@@ -132,6 +178,8 @@ export function reportPetActivity(input: PetActivity | null | undefined) {
   const previous = reported
   reported = next
   if (!previous) log("activity reporting started", { state: next.state, sessionID: next.sessionID })
+  if (next.state !== "idle" && next.state !== "loafing" && next.state !== "sleeping") revealPet()
+  else touchPet()
   publish()
 }
 
@@ -180,6 +228,52 @@ export function getPetSnapshot(): PetSnapshot {
   return { ...base, state: activity.state, detail: activity.detail }
 }
 
+function tick() {
+  publish()
+  maybeHide()
+}
+
+function touchPet() {
+  lastTouch = Date.now()
+}
+
+function maybeHide() {
+  if (!petWindow || petWindow.isDestroyed() || !petWindow.isVisible() || edgeHidden) return
+  const snapshot = getPetSnapshot()
+  if (snapshot.state !== "idle" && snapshot.state !== "loafing" && snapshot.state !== "sleeping") {
+    touchPet()
+    return
+  }
+  if (Date.now() - lastTouch < HIDE_AFTER_MS) return
+  hideToEdge()
+}
+
+function hideToEdge() {
+  if (!petWindow || petWindow.isDestroyed() || edgeHidden) return
+  const bounds = petWindow.getBounds()
+  const area = screen.getDisplayMatching(bounds).workArea
+  const side = bounds.x + bounds.width / 2 < area.x + area.width / 2 ? "left" : "right"
+  const x = side === "left" ? area.x - petWidth() + EDGE_VISIBLE : area.x + area.width - EDGE_VISIBLE
+  const y = Math.min(Math.max(bounds.y, area.y), area.y + area.height - petHeight())
+  restoreBounds = { x: bounds.x, y: bounds.y }
+  edgeHidden = true
+  edgeSide = side
+  petWindow.setBounds({ x: Math.round(x), y: Math.round(y), width: petWidth(), height: petHeight() })
+  log("pet tucked", { side: edgeSide })
+}
+
+export function revealPet() {
+  lastTouch = Date.now()
+  if (!petWindow || petWindow.isDestroyed() || !edgeHidden) return
+  const saved = restoreBounds ?? { x: petWindow.getBounds().x, y: petWindow.getBounds().y }
+  const position = clampToWorkArea(saved.x, saved.y)
+  edgeHidden = false
+  edgeSide = null
+  restoreBounds = null
+  petWindow.setBounds({ ...position, width: petWidth(), height: petHeight() })
+  log("pet revealed")
+}
+
 function publish() {
   if (!petWindow || petWindow.isDestroyed()) return
   const snapshot = getPetSnapshot()
@@ -202,15 +296,15 @@ export function createPetWindow() {
   const saved = readPosition()
   const area = screen.getPrimaryDisplay().workArea
   const position = clampToWorkArea(
-    saved?.x ?? area.x + area.width - PET_WIDTH - 24,
-    saved?.y ?? area.y + area.height - PET_HEIGHT - 24,
+    saved?.x ?? area.x + area.width - petWidth() - 24,
+    saved?.y ?? area.y + area.height - petHeight() - 24,
   )
 
   const win = new BrowserWindow({
     x: position.x,
     y: position.y,
-    width: PET_WIDTH,
-    height: PET_HEIGHT,
+    width: petWidth(),
+    height: petHeight(),
     show: false,
     frame: false,
     transparent: true,
@@ -262,13 +356,18 @@ export function createPetWindow() {
     // The constructor's size is rounded up to whole physical pixels, which at
     // 150% lands on 222×260. Re-asserting the logical size keeps the footprint
     // identical to what the drag handler maintains.
-    win.setBounds({ ...position, width: PET_WIDTH, height: PET_HEIGHT })
+    win.setBounds({ ...position, width: petWidth(), height: petHeight() })
     // Never steal focus from the chat window the pet is supposed to be watching.
     win.showInactive()
+    lastTouch = Date.now()
+    edgeHidden = false
+    restoreBounds = null
     publish()
   })
 
-  win.on("moved", () => savePosition(win))
+  win.on("moved", () => {
+    if (!edgeHidden) savePosition(win)
+  })
   win.on("closed", () => {
     if (petWindow === win) petWindow = null
   })
@@ -295,12 +394,12 @@ function savePosition(win: BrowserWindow) {
  */
 function clampToWorkArea(x: number, y: number) {
   const area = screen.getDisplayNearestPoint({
-    x: Math.round(x + PET_WIDTH / 2),
-    y: Math.round(y + PET_HEIGHT / 2),
+    x: Math.round(x + petWidth() / 2),
+    y: Math.round(y + petHeight() / 2),
   }).workArea
   return {
-    x: Math.min(Math.max(x, area.x - PET_WIDTH + 40), area.x + area.width - 40),
-    y: Math.min(Math.max(y, area.y - PET_HEIGHT + 40), area.y + area.height - 40),
+    x: Math.min(Math.max(x, area.x - petWidth() + 40), area.x + area.width - 40),
+    y: Math.min(Math.max(y, area.y - petHeight() + 40), area.y + area.height - 40),
   }
 }
 
@@ -313,6 +412,8 @@ let dragOrigin: { x: number; y: number } | null = null
 
 export function beginPetDrag() {
   if (!petWindow || petWindow.isDestroyed()) return
+  revealPet()
+  touchPet()
   const bounds = petWindow.getBounds()
   dragOrigin = { x: bounds.x, y: bounds.y }
 }
@@ -322,32 +423,39 @@ export function beginPetDrag() {
  * running at a fractional scale (150%) adds one logical pixel to the width and
  * the height on every call under Electron 42, so dragging steadily inflated the
  * pet's footprint — the window would grow a pixel per move. Handing `setBounds`
- * an explicit size keeps it pinned to PET_WIDTH × PET_HEIGHT.
+ * an explicit size keeps it pinned to petWidth() × petHeight().
  */
 export function dragPet(dx: number, dy: number) {
   if (!petWindow || petWindow.isDestroyed()) return
   if (!Number.isFinite(dx) || !Number.isFinite(dy)) return
+  revealPet()
+  touchPet()
   if (!dragOrigin) beginPetDrag()
   if (!dragOrigin) return
   const position = clampToWorkArea(dragOrigin.x + dx, dragOrigin.y + dy)
   petWindow.setBounds({
     x: Math.round(position.x),
     y: Math.round(position.y),
-    width: PET_WIDTH,
-    height: PET_HEIGHT,
+    width: petWidth(),
+    height: petHeight(),
   })
 }
 
 export function endPetDrag() {
   dragOrigin = null
+  touchPet()
 }
 
 export function setPetVisible(visible: boolean) {
   if (visible) {
     const win = createPetWindow()
     win.showInactive()
+    touchPet()
     return
   }
+  edgeHidden = false
+  edgeSide = null
+  restoreBounds = null
   if (petWindow && !petWindow.isDestroyed()) petWindow.hide()
 }
 
@@ -359,6 +467,30 @@ export function togglePet() {
   const visible = isPetVisible()
   setPetVisible(!visible)
   return !visible
+}
+
+export function quitApp() {
+  setAppQuitting()
+  app.quit()
+}
+
+function showPetMenu() {
+  const win = petWindow
+  if (!win || win.isDestroyed()) return
+  Menu.buildFromTemplate([
+    { label: "打开工作窗口", click: () => focusMainWindow() },
+    { label: "编辑性格…", click: () => openPersonaWindow() },
+    {
+      label: "宠物尺寸",
+      submenu: [
+        { label: "小", type: "radio", checked: petSize === "small", click: () => setPetSize("small") },
+        { label: "中", type: "radio", checked: petSize === "medium", click: () => setPetSize("medium") },
+        { label: "大", type: "radio", checked: petSize === "large", click: () => setPetSize("large") },
+      ],
+    },
+    { type: "separator" },
+    { label: "退出 PhilaGift", click: () => quitApp() },
+  ]).popup({ window: win })
 }
 
 /** Brings the chat window forward without activating the pet itself. */
@@ -384,6 +516,7 @@ export function focusMainWindow() {
  * notification would be worse than the toast the feature replaces.
  */
 export function sayInPet(speech: PetSpeech) {
+  revealPet()
   const win = petWindow
   if (!win || win.isDestroyed() || !win.isVisible()) return false
 
@@ -434,4 +567,7 @@ export function stopPet() {
   }
   if (petWindow && !petWindow.isDestroyed()) petWindow.destroy()
   petWindow = null
+  edgeHidden = false
+  edgeSide = null
+  restoreBounds = null
 }

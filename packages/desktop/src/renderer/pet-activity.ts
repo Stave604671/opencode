@@ -6,7 +6,7 @@
  * store the chat UI renders from: one source of truth, no second event stream.
  */
 import { createEffect, createMemo, createSignal } from "solid-js"
-import { useGlobal, useServers } from "@opencode/app/desktop"
+import { useCurrentRoute, useGlobal, useServers } from "@opencode/app/desktop"
 import type { PetAPI, PetState } from "../preload/types"
 
 declare global {
@@ -99,6 +99,12 @@ const GREET_WINDOW_MS = 3000
 export function usePetActivity() {
   const global = useGlobal()
   const servers = useServers()
+  const route = useCurrentRoute()
+
+  createEffect(() => {
+    const current = route()
+    reportBoundSession(current.type === "session" ? `/session/${current.sessionId}` : "")
+  })
 
   // The window follows its own server: the bundled sidecar, or whichever server
   // served this window when it is not the sidecar.

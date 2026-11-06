@@ -28,6 +28,9 @@ export function createDesktopPlatform(api: ElectronAPI, windowState: DesktopWind
     setForceFocus: (enabled) => api.setForceFocus(enabled),
     recordFatalRendererError: (error) => api.recordFatalRendererError(error),
     restart: async () => api.relaunch(),
+    dataDirectory: () => window.electron.gift.getDataDir(),
+    chooseDataDirectory: () => window.electron.gift.chooseDataDir(),
+    logGiftAction: (entry) => window.electron.gift.log(entry),
     notify: createDesktopNotify(api),
     fetch: (input, init) => {
       if (input instanceof Request) return fetch(input)

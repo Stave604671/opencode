@@ -1,4 +1,26 @@
-# 鲸鱼女仆 皮肤（`skin: whale`）· 素材来源与制作
+# 鲸鱼女仆 皮肤（`skin: whale`）· 素材来源与许可
+
+## 当前版本（2026-11-06 起，`.webp` 动画）
+
+本目录中的 `.webp` 动画取自 `PC2005-cloud/dsh-pet` 的 `whaletail-maid`
+帧序列（经 `dsh-dafeiyu` 的 `assets/pet` 转换，源 commit
+`549fff2ea33c2acfb16612c76912c6137da4a758`，裁切 412×344，24fps）。
+
+- 角色与美术：PC2005-cloud / dsh-pet
+- 许可证：MIT（Copyright (c) 2026 PC2005-cloud）；上游 MIT 文本见同目录
+  `dsh-pet-LICENSE.txt`。
+- 使用范围：可以随 PhilaGift 免费或商业分发，但必须保留上面的版权和
+  许可声明。当前使用 `assets/pet/` 的 MIT 素材，不是 dsh-bigfish 或
+  `legacy/dafeiyu/` 的受限 BigFish 素材。
+- 转换：每 8 帧采样，等比缩放并居中到 320×320 RGBA 透明画布，
+  60ms/帧，无限循环，动画 WebP（保留 alpha）。
+- 状态映射：idle→idle, thinking→thinking, working→working,
+  sweeping→working_command, waiting→waiting, needsinput→head_pat,
+  attention→poke, error→error, sad→tail, happy→success, greet→head_pat,
+  loafing→idle_stretch, sleeping→idle_yawn, talking→idle, roam→dragging。
+- 旧版 360×360 GIF 仍保留在本目录，作为回退/历史参考，`pet.ts` 不再引用。
+
+## 旧版（LLMPET 360×360 GIF，保留作回退）
 
 本皮肤使用**自有原创角色**「鲸鱼女仆」，与 `assets/cat/`（抖音 @月薪喵 的表情包）
 无关，不受其版权限制。

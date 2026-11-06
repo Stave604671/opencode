@@ -57,6 +57,15 @@ type PlatformBase = {
   /** Restart the app  */
   restart(): Promise<void>
 
+  /** Directory holding the gift app's SQLite data */
+  dataDirectory?(): Promise<string>
+
+  /** Ask the native picker for a new data directory; null when cancelled. Applies after restart. */
+  chooseDataDirectory?(): Promise<string | null>
+
+  /** Append a user-driven settings change to the desktop gift worklog. */
+  logGiftAction?(entry: Record<string, unknown>): Promise<void> | void
+
   /** Send a system notification; `tone` lets a platform draw it in the pet's voice */
   notify(
     title: string,

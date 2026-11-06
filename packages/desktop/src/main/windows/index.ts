@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto"
 import { app, BrowserWindow, screen } from "electron"
 import { Effect, FileSystem, Path } from "effect"
+import { CHANNEL } from "../constants"
 import { openExternalURL } from "../files"
 import { scoped } from "../native/logging"
 import { DesktopPaths } from "../paths"
@@ -135,10 +136,10 @@ export const mainWindows = Effect.fn("Window.make")(function* () {
 
     if (usable && !list.includes(usable.id)) usable.win.destroy()
 
-    return list.map((id) => create(id, usable?.id === id ? usable : undefined))
+    return list.map((id) => create(id, usable?.id === id ? usable : undefined, true))
   }
 
-  const create = (id: string = randomUUID(), early?: EarlyWindow) => {
+  const create = (id: string = randomUUID(), early?: EarlyWindow, startup = false) => {
     const stateFile = path.join(app.getPath("userData"), windowStateFile(id))
     const state = early?.state ?? resolveWindowState(readWindowState(stateFile), { width: 1280, height: 800 }, displays)
     const appearance = windowAppearance(path, paths)
@@ -194,6 +195,7 @@ export const mainWindows = Effect.fn("Window.make")(function* () {
     }
 
     const reveal = () => {
+      if (startup && CHANNEL === "gift") return
       if (!contentReady || !appliedTheme || revealed || win.isDestroyed()) return
       revealed = true
       win.show()
@@ -220,6 +222,13 @@ export const mainWindows = Effect.fn("Window.make")(function* () {
 
   const register = (win: BrowserWindow, id: string) => {
     registry.register(id, win)
+    if (CHANNEL === "gift") {
+      win.on("close", (event) => {
+        if (registry.isQuitting()) return
+        event.preventDefault()
+        win.hide()
+      })
+    }
     win.on("focus", () => registry.focused(id))
     // Windows emits session-end, but not before-quit, during shutdown and logoff.
     win.on("session-end", () => registry.setQuitting())

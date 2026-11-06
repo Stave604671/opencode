@@ -11,6 +11,7 @@ import { BackgroundService } from "./service/background-service"
 import { DesktopCli } from "./service/desktop-cli"
 import { marks } from "./lifecycle/marks"
 import { startPet, getPetWindow, stopPet } from "./pet"
+import { startTray, stopTray } from "./tray"
 
 // Everything above has been loaded and evaluated by now; the layers start below.
 marks.bundle = Date.now()
@@ -28,6 +29,9 @@ const runIpc = Effect.fn("Desktop.runIpc")(function* () {
 
   if (lifecycle.restoreWindows().length) ipc.installMenu()
   startPet()
+  yield* Effect.sync(() => {
+    void startTray().catch(() => undefined)
+  })
   // The first window's renderer now has its IPC port and is hydrating its stores over it. The crash
   // reporter (spawns a process) and the context menu (a dependency tree) are not worth answering late.
   yield* Effect.sleep("500 millis")
@@ -49,7 +53,12 @@ const runIpc = Effect.fn("Desktop.runIpc")(function* () {
       })
     })
   })
-  yield* Effect.addFinalizer(() => Effect.sync(() => stopPet()))
+  yield* Effect.addFinalizer(() =>
+    Effect.sync(() => {
+      stopTray()
+      stopPet()
+    }),
+  )
   yield* Effect.callback<void>((resume) => {
     const quit = () => resume(Effect.void)
     app.once("will-quit", quit)

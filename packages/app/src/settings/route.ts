@@ -20,7 +20,7 @@ export type SettingsPluginTab = string & { readonly [pluginTab]: true }
 /** Root pages that show one server's settings: the selected server, or the default one. */
 export type SettingsServerTab = "projects" | "workspaces" | "providers" | "models" | "extensions"
 
-export type SettingsProjectTab = "general" | "workspaces" | "extensions"
+export type SettingsProjectTab = "general" | "workspaces" | "extensions" | "permissions"
 
 type SettingsViewState = {
   target?: string
@@ -62,6 +62,7 @@ const projectTabs: Record<SettingsProjectTab, true> = {
   general: true,
   workspaces: true,
   extensions: true,
+  permissions: true,
 }
 
 const subtabs: Record<NonNullable<SettingsView["subtab"]>, true> = {

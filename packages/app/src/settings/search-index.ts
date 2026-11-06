@@ -2,10 +2,17 @@ import type { SettingsPage } from "@opencode/plugin/gui"
 import type { useLanguage } from "@/runtime/i18n/language"
 import type { LocalProject } from "@/shell/state/layout"
 import { displayName } from "@opencode/ui/project-avatar"
-import { clientSettings, projectSettings, serverSettings } from "./search-catalog"
+import { clientSettings, projectSettings, serverSettings, type Entry } from "./search-catalog"
 import { pageIcons, pageLabels } from "./pages"
 import type { SettingsSearchResult } from "./search-results"
-import type { SettingsPluginTab, SettingsHostView, SettingsServerTab, SettingsView } from "./surface"
+import type {
+  SettingsPluginTab,
+  SettingsHostView,
+  SettingsProjectTab,
+  SettingsRootTab,
+  SettingsServerTab,
+  SettingsView,
+} from "./surface"
 
 export type SettingsSearchServer = {
   key: string
@@ -31,7 +38,7 @@ export function settingsSearchIndex(input: {
   const multiple = input.servers.length > 1
 
   const add = (
-    entry: (typeof clientSettings)[number],
+    entry: Entry<SettingsRootTab | SettingsProjectTab | SettingsServerTab>,
     view: SettingsHostView,
     owner: string,
     server?: string,

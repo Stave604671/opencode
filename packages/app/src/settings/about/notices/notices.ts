@@ -1,5 +1,6 @@
 import apache from "./apache-2.0.txt?raw"
 import betterOfficeNotice from "./betteroffice-notice.txt?raw"
+import mit from "./mit.txt?raw"
 import { crates, crateTexts } from "./crates"
 
 /**
@@ -24,6 +25,15 @@ export const notices = [
     license: "Apache License 2.0",
     notice: "Copyright 2026 EigenPal Inc.",
     text: apache,
+  },
+  {
+    name: "dsh-pet whale-tail maid character assets",
+    detail: "Converted by dsh-dafeiyu from PC2005-cloud/dsh-pet",
+    detailKey: undefined,
+    url: "https://github.com/PC2005-cloud/dsh-pet",
+    license: "MIT License",
+    notice: "Copyright (c) 2026 PC2005-cloud",
+    text: mit,
   },
 ]
 

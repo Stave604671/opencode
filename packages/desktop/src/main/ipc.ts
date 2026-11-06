@@ -21,6 +21,7 @@ import { createMenu, sendMenuCommand } from "./native/menu"
 import { DesktopCli } from "./service/desktop-cli"
 import { getLastFocusedWindow } from "./windows"
 import { registerPetIpc } from "./pet"
+import { registerGiftIpc } from "./gift"
 
 const services = Layer.mergeAll(DesktopFiles.layer, Plugins.layer)
 
@@ -86,6 +87,7 @@ export const registerIpcHandlers = Effect.gen(function* () {
 
   yield* Effect.sync(() => {
     registerPetIpc()
+    registerGiftIpc()
     app.on("browser-window-created", onWindowCreated)
     BrowserWindow.getAllWindows().forEach((win) => wire(win))
   })

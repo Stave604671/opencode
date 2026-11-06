@@ -1,5 +1,6 @@
-import { Component, Show, createMemo, createResource } from "solid-js"
+import { Component, Show, createMemo, createResource, createSignal } from "solid-js"
 import { createMediaQuery } from "@solid-primitives/media"
+import { Button } from "@opencode/ui/button"
 import { Select } from "@opencode/ui/select"
 import { Switch } from "@opencode/ui/switch"
 import { TimelineDetailControl } from "@/settings/timeline-detail"
@@ -199,6 +200,43 @@ const TimelineWidthSetting = () => {
   )
 }
 
+const DataDirectorySetting: Component = () => {
+  const language = useLanguage()
+  const platform = usePlatform()
+  const [current, { mutate }] = createResource(() => platform.dataDirectory?.() ?? Promise.resolve(""), {
+    initialValue: "",
+  })
+  const [pending, setPending] = createSignal(false)
+
+  const change = async () => {
+    const next = await platform.chooseDataDirectory?.()
+    if (!next) return
+    mutate(next)
+    setPending(true)
+  }
+
+  return (
+    <SettingsRow
+      title={language.t("settings.general.row.dataDirectory.title")}
+      description={language.t("settings.general.row.dataDirectory.description")}
+    >
+      <div class="flex items-center gap-2" data-action="settings-data-directory">
+        <span class="text-11-regular text-v2-text-text-muted max-w-[240px] truncate" title={current.latest}>
+          {current.latest}
+        </span>
+        <Button variant="ghost" onClick={() => void change()}>
+          {language.t("settings.general.row.dataDirectory.change")}
+        </Button>
+        <Show when={pending()}>
+          <Button variant="ghost" onClick={() => void platform.restart()}>
+            {language.t("settings.general.row.dataDirectory.restart")}
+          </Button>
+        </Show>
+      </div>
+    </SettingsRow>
+  )
+}
+
 const LanguageSetting = () => {
   const language = useLanguage()
 
@@ -282,6 +320,10 @@ export const SettingsGeneral: Component = () => {
               <Switch checked={pinchZoom.latest} onChange={onPinchZoomChange} />
             </div>
           </SettingsRow>
+        </Show>
+
+        <Show when={desktop() && platform.dataDirectory}>
+          <DataDirectorySetting />
         </Show>
 
         <PluginSettingsSections page="general" section="general" />
